@@ -1,7 +1,15 @@
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 class BasicBlock(nn.Module):
     def __init__(self,in_channels,out_channels,stride=1):
@@ -105,11 +113,11 @@ def run_epoch(model,loader,loss_fn,device,optimizer=None,scaler=None):
     return total_loss/total,100*correct/total
 
 def main():
+    set_seed(42)
     epochs=100
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader,test_loader=make_loaders()
     model=ResNet18().to(device)
-    import sys
     loss_fn=nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer=torch.optim.SGD(
         model.parameters(),lr=0.1,momentum=0.9,weight_decay=0.0005
@@ -123,6 +131,7 @@ def main():
             model,train_loader,loss_fn,device,optimizer,scaler,
         )
         test_loss,test_acc=run_epoch(model,test_loader,loss_fn,device)
+        scheduler.step()
 
         if test_acc>best_acc:
             best_acc=test_acc
